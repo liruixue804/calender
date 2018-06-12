@@ -8,8 +8,7 @@ var input1 = [
   { id: 7, start: 360, end: 500 },
   { id: 8, start: 290, end: 470 },
   { id: 9, start: 430, end: 520 },
-  { id: 10, start: 240, end: 350 },
-
+  { id: 10, start: 240, end: 350 }
 ];
 var input2 = [
   { id: 1, start: 0, end: 30 },
@@ -110,180 +109,151 @@ var input2 = [
   { id: 97, start: 330, end: 420 },
   { id: 98, start: 330, end: 640 },
   { id: 99, start: 540, end: 650 },
-  { id: 100, start: 430, end: 520 },
-
-
-
-]
-/********打印object*******/
-function writeObj(obj) {
-  var description = " ";
-  for (var i in obj) {
-    var property = obj[i];
-    description += i + " = " + property + "\n";
-  }
-  return description;
-}
+  { id: 100, start: 430, end: 520 }
+];
 
 /***********画图*******/
 function draw(obj) {
-
   var div = document.createElement("div");
-  div.style.position = "absolute";
   div.style.left = obj.left + "px";
   div.style.top = obj.top + "px";
   div.style.height = obj.height + "px";
   div.style.width = obj.width - 5 + "px";
-  div.style.backgroundColor = "rgba(255,255,255,1)";
-  div.style.border = "1px solid rgba(0, 0, 0, 0.15)";
-  div.style.borderLeft = "4px solid rgba(75, 110, 169, 0.952)";
-  div.style.textAlign = "center";
   div.style.lineHeight = obj.height + "px";
-  div.innerHTML = "<a>" + obj.id + "</a>"
+  div.innerHTML = "<a>" + obj.id + "</a>";
   document.getElementById("container").appendChild(div);
-
 }
 
 /****判断事件x,y是否重叠**/
-function compare(x, y) {
+function isOverlapping(x, y) {
   if (x.start >= y.end || x.end <= y.start) {
     return false;
   }
-  else {
-    return true;
-  }
+  return true;
 }
 
-/*****事件冒泡排序(by start)***/
-function BubbleSort(x) {
-  for (var i = 0; i < x.length; i++) {
-    for (var j = i + 1; j < x.length; j++) {
-      if (x[i].start > x[j].start) {
-        var temp = x[i];
-        x[i] = x[j];
-        x[j] = temp;;
-      }
-    }
-  }
-}
-
-/*****冲突事件关联集*******/
-function DJ(S_start, E_end, events, temp) {
-  var start = S_start;
-  var end = E_end;
-  var obj = {};
-  obj.start = start;
-  obj.end = end;
-  for (var i = 0; i < events.length; i++) {
-    if (events[i].mark != 1 && compare(events[i], obj)) {
-      temp.push(events[i]);
+/*****寻找最大冲突范围事件集*******/
+function findMaxCollidingSet(start, end, events, fromIndex) {
+  var collidingSet = [];
+  for (var i = fromIndex; i < events.length; i++) {
+    if (events[i].mark != 1 && isOverlapping(events[i], { "start": start, "end": end })) {
+      collidingSet.push(events[i]);
       events[i].mark = 1;
-      start = events[i].start < start ? events[i].start : start;
-      end = events[i].end > end ? events[i].end : end;
-      DJ(start, end, events, temp);
+      start = Math.min(events[i].start, start);
+      end = Math.max(events[i].end, end);
+      collidingSet = collidingSet.concat(findMaxCollidingSet(start, end, events, i + 1));
     }
-
+    break;
   }
-
-
+  return collidingSet;
 }
 
-/****寻找最大的横坐标*******/
-function FindMax(events) {
+/********寻找事件集最大的横坐标*******/
+function maxHorizontalOrdinate(events) {
   var max = 0;
   for (var i = 0; i < events.length; i++) {
     if (events[i].left > max) {
       max = events[i].left;
     }
   }
-
   return max;
 }
 
-
-/******function layOutDay******** */
-function layOutDay(event1) {
-  var defalutWidth = 100;
-  var totalWidth = 600;
-  var event = event1;
-  var len = event.length;
-  var temp = [];   //冲突事件数组[][]    
-  var result2 = []; //与每个事件范围相冲突的事件[][]
-  var count = 0;
-
-  for (var i = 0; i < len; i++) {
-    if (!event[i].mark) {
-      temp[count] = [];
-      DJ(event[i].start, event[i].end, event, temp[count]);
-      count++;
-    }
-
+/********事件默认赋值*******/
+function initEvents(events, defalutWidth) {
+  for (var j = 0; j < events.length; j++) {
+    events[j].width = defalutWidth;
+    events[j].height = -events[j].start + events[j].end;
+    events[j].top = events[j].start;
   }
-
-  BubbleSort(event);
-
-
-  for (var j = 0; j < event.length; j++) {
-    for (var i = 0; i < len; i++) {
-      if (compare(event[j], event[i])) {
-        if (!result2[j]) {
-          result2[j] = [];
-        }
-        result2[j].push(event[i]);
-      }
-    }
-  }
-
-  for (var j = 0; j < event.length; j++) {//事件初始赋值
-    event[j].width = defalutWidth;
-    event[j].height = -event[j].start + event[j].end;
-    event[j].top = event[j].start;
-
-  }
-
-
-  for (var t = 0; t < event.length; t++) {//按顺序给每个事件从左往右安排位子，没位子后挪，直到有空位，假设画布无限宽
-    var flag = 0;
-    for (var m = 0; m < result2[t].length; m++) {
-      if (result2[t][m].left == flag) {
-        flag = result2[t][m].left + result2[t][m].width;
-        m = -1;
-      }
-    }
-    event[t].left = flag;
-  }
-
-  for (var t = 0; t < temp.length; t++) {//根据画布内容宽度，将画布横向缩短到600
-    var max = FindMax(temp[t]);
-    var a = totalWidth / (max + defalutWidth);
-    var width = a * defalutWidth;
-    for (var m = 0; m < temp[t].length; m++) {
-      temp[t][m].width = width;
-      temp[t][m].left = temp[t][m].left * a;
-    }
-
-  }
-
-
-  for (var t = 0; t < temp.length; t++) {//打印事件信息
-    console.log("--------------------------------")
-    for (var j = 0; j < temp[t].length; j++) {
-      console.log(writeObj(temp[t][j]));
-    }
-  }
-
-
-  return event;
-
 }
 
+/********打印所有事件信息*******/
+function printEvent(events) {
+  for (var t = 0; t < events.length; t++) {
+    console.dir(events[t]);
+  }
+}
+
+/********给事件安排横坐标*******/
+function searchForPosition(collidingSets, influenceEventSets, totalWidth) {
+  for (var t = 0; t < collidingSets.length; t++) {//每个子集
+    for (var n = 0; n < collidingSets[t].length; n++) {//每个事件
+      var flag = 0;
+      for (var m = 0; m < influenceEventSets[t][n].length; m++) {
+        if (influenceEventSets[t][n][m].left == flag) {
+          flag = influenceEventSets[t][n][m].left + influenceEventSets[t][n][m].width;
+          m = -1;
+        }
+      }
+      collidingSets[t][n].left = flag;
+    }
+  }
+}
+
+/********调整事件宽度和横坐标*******/
+function adjustEventsWidth(collidingSets, influenceEventSets, defalutWidth, totalWidth) {
+  for (var i = 0; i < collidingSets.length; i++) {
+    var max = maxHorizontalOrdinate(collidingSets[i]);
+    var a = totalWidth / (max + defalutWidth);
+    var width = a * defalutWidth;
+    for (var m = 0; m < collidingSets[i].length; m++) {
+      collidingSets[i][m].width = width;
+      collidingSets[i][m].left = collidingSets[i][m].left * a;
+    }
+  }
+}
+
+/********寻找相互影响的事件*******/
+function influenceEvent(collidingSets) {
+  var influenceEventSets = [];
+  for (var t = 0; t < collidingSets.length; t++) {
+    influenceEventSets[t] = [];
+    var subset = collidingSets[t];
+    for (var m = 0; m < subset.length; m++) {
+      for (var n = 0; n < subset.length; n++) {
+        if (isOverlapping(subset[m], subset[n])) {
+          if (!influenceEventSets[t][m]) {
+            influenceEventSets[t][m] = [];
+          }
+          influenceEventSets[t][m].push(subset[n]);
+        }
+      }
+    }
+  }
+  return influenceEventSets;
+}
+
+/******function layOutDay******** */
+function layOutDay(events) {
+  var totalWidth = 600;
+  var defaultWidth = 10;
+  var collidingSets = [];   //冲突事件数组[][]    
+  var influenceEventSets = []; //与每个事件范围相冲突的事件[][]
+  var count = 0;
+
+  events.sort(function (lhv, rhv) { return lhv.start - rhv.start });//事件按时间排序
+
+  for (var i = 0; i < events.length;) {
+    if (!events[i].mark) {
+      collidingSets[count] = findMaxCollidingSet(events[i].start, events[i].end, events, i);
+      i += (collidingSets[count]).length;
+      count++;
+    }
+  }
+  initEvents(events, defaultWidth);
+  influenceEventSets = influenceEvent(collidingSets);//寻找与每个事件相互影响的事件集
+  searchForPosition(collidingSets, influenceEventSets, totalWidth);//确定事件横坐标
+  adjustEventsWidth(collidingSets, influenceEventSets, defaultWidth, totalWidth);//调整事件横坐标宽度
+  printEvent(events);//打印事件信息
+  return events;
+}
 
 window.onload = function () {
   var result = layOutDay(input1);
   for (var t = 0; t < result.length; t++) {
     draw(result[t]);
-
   }
-};
+}
 
 
