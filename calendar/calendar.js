@@ -254,10 +254,4 @@ window.onload = function () {
   for (var t = 0; t < result.length; t++) {
     draw(result[t]);
   }
-<<<<<<< HEAD
 }
-=======
-}
-
-
->>>>>>> 3684359fc2d52f239573c848b508e7690da895bf
